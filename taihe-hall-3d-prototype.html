@@ -1,0 +1,2613 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>太和殿 · 3D 构成分析技术原型</title>
+  <style>
+    :root {
+      --bg: #f5eddf;
+      --panel: rgba(255, 250, 240, 0.82);
+      --panel-strong: rgba(255, 250, 240, 0.96);
+      --line: rgba(120, 88, 49, 0.18);
+      --line-strong: rgba(164, 117, 56, 0.42);
+      --gold: #bd8d36;
+      --gold-soft: #e5c77a;
+      --red: #a83b2b;
+      --cyan: #6f9694;
+      --jade: #54766f;
+      --stone: #d3c4a6;
+      --ink: #463625;
+      --muted: #7e725f;
+      --shadow: 0 22px 64px rgba(85, 65, 37, 0.18);
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 12% 8%, rgba(189, 141, 54, 0.12), transparent 26%),
+        radial-gradient(circle at 82% 18%, rgba(84, 118, 111, 0.12), transparent 30%),
+        linear-gradient(145deg, #fbf7ed 0%, #f2e7d5 42%, #ebe1ce 100%);
+      color: var(--ink);
+      font-family:
+        "Noto Serif SC", "Source Han Serif SC", "Songti SC", "Microsoft YaHei",
+        system-ui, sans-serif;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        url("assets/ai/texture-paper.png"),
+        linear-gradient(rgba(120,88,49,0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(120,88,49,0.035) 1px, transparent 1px);
+      background-size: 360px 360px, 36px 36px, 36px 36px;
+      opacity: 0.55;
+      mask-image: linear-gradient(to bottom, transparent, #000 14%, #000 80%, transparent);
+    }
+
+    #app {
+      height: 100%;
+      display: grid;
+      grid-template-rows: 68px 1fr;
+    }
+
+    .topbar {
+      position: relative;
+      z-index: 8;
+      display: grid;
+      grid-template-columns: 310px 1fr auto;
+      gap: 18px;
+      align-items: center;
+      padding: 0 22px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255, 250, 240, 0.94), rgba(245, 237, 223, 0.82));
+      backdrop-filter: blur(18px);
+    }
+
+    .brand {
+      min-width: 0;
+    }
+
+    .brand-kicker {
+      color: var(--gold);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+
+    .brand-title {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      white-space: nowrap;
+    }
+
+    .brand-title strong {
+      font-size: 23px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+    }
+
+    .brand-title span {
+      color: var(--muted);
+      font-size: 13px;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+    }
+
+    .mode-tabs,
+    .view-tabs,
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .mode-tabs {
+      justify-content: center;
+    }
+
+    button,
+    .chip {
+      height: 36px;
+      border: 1px solid rgba(217, 177, 93, 0.24);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.55);
+      color: var(--ink);
+      font: 500 13px/1 ui-sans-serif, system-ui, sans-serif;
+      cursor: pointer;
+      transition: transform 160ms ease, background 160ms ease, border-color 160ms ease, color 160ms ease;
+      user-select: none;
+    }
+
+    button {
+      padding: 0 13px;
+    }
+
+    button:hover,
+    .chip:hover {
+      transform: translateY(-1px);
+      border-color: rgba(242, 216, 154, 0.58);
+      background: rgba(217, 177, 93, 0.12);
+    }
+
+    button.active,
+    .chip.active {
+      color: #17130d;
+      background: linear-gradient(180deg, #f2d994, #c99b42);
+      border-color: rgba(255, 226, 156, 0.86);
+      box-shadow: 0 8px 22px rgba(191, 135, 56, 0.25);
+    }
+
+    button.icon {
+      width: 38px;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      font-size: 16px;
+    }
+
+    .layout {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 292px minmax(0, 1fr) 342px;
+      gap: 16px;
+      padding: 16px;
+    }
+
+    .panel {
+      position: relative;
+      z-index: 4;
+      min-height: 0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,255,255,0.24)),
+        var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(20px);
+    }
+
+    .panel-header {
+      height: 54px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,0.28);
+    }
+
+    .panel-header h2 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+    }
+
+    .panel-header small {
+      color: var(--muted);
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-size: 11px;
+    }
+
+    .component-list {
+      padding: 12px;
+      display: grid;
+      gap: 9px;
+      overflow: auto;
+      height: calc(100% - 54px);
+    }
+
+    .component-card {
+      position: relative;
+      min-height: 82px;
+      padding: 12px 13px 12px 88px;
+      border: 1px solid rgba(120, 88, 49, 0.12);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.42);
+      cursor: pointer;
+      transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+    }
+
+    .component-card:hover {
+      transform: translateY(-1px);
+      border-color: var(--line-strong);
+      background: rgba(189, 141, 54, 0.1);
+    }
+
+    .component-card.active {
+      border-color: rgba(242, 216, 154, 0.78);
+      background: linear-gradient(135deg, rgba(217, 177, 93, 0.17), rgba(163, 48, 36, 0.14));
+    }
+
+    .component-index {
+      position: absolute;
+      left: 15px;
+      top: 14px;
+      width: 22px;
+      height: 22px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(217, 177, 93, 0.45);
+      border-radius: 50%;
+      color: var(--gold-soft);
+      font: 700 11px/1 ui-sans-serif, system-ui, sans-serif;
+      background: rgba(255, 250, 240, 0.82);
+      z-index: 2;
+    }
+
+    .component-thumb {
+      position: absolute;
+      left: 13px;
+      top: 13px;
+      width: 58px;
+      height: 56px;
+      object-fit: cover;
+      border-radius: 7px;
+      border: 1px solid rgba(120, 88, 49, 0.16);
+      background: #f6efe1;
+    }
+
+    .component-card h3 {
+      margin: 0 0 7px;
+      font-size: 15px;
+      letter-spacing: 0.04em;
+    }
+
+    .component-card p {
+      margin: 0;
+      color: var(--muted);
+      font: 12px/1.55 ui-sans-serif, system-ui, sans-serif;
+    }
+
+    .stage-wrap {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background:
+        radial-gradient(circle at 50% 34%, rgba(229, 199, 122, 0.3), transparent 28%),
+        radial-gradient(circle at 50% 72%, rgba(111, 150, 148, 0.16), transparent 36%),
+        linear-gradient(180deg, rgba(255, 250, 240, 0.72), rgba(233, 223, 207, 0.68));
+      box-shadow: var(--shadow);
+    }
+
+    #scene {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .stage-vignette {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      box-shadow: inset 0 0 90px rgba(119, 91, 52, 0.16);
+    }
+
+    .stage-caption {
+      position: absolute;
+      left: 18px;
+      bottom: 18px;
+      z-index: 3;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--ink);
+      font: 12px/1 ui-sans-serif, system-ui, sans-serif;
+      background: rgba(255, 250, 240, 0.72);
+      border: 1px solid rgba(120, 88, 49, 0.14);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      backdrop-filter: blur(14px);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--jade);
+      box-shadow: 0 0 16px var(--jade);
+    }
+
+    .label-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .scene-label {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      padding: 5px 8px;
+      border: 1px solid rgba(242, 216, 154, 0.45);
+      border-radius: 999px;
+      background: rgba(255, 250, 240, 0.82);
+      color: var(--gold-soft);
+      font: 11px/1 ui-sans-serif, system-ui, sans-serif;
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity 160ms ease, transform 160ms ease;
+    }
+
+    .scene-label.show {
+      opacity: 1;
+    }
+
+    .info-content {
+      height: calc(100% - 54px);
+      overflow: auto;
+      padding: 16px;
+    }
+
+    .illustration {
+      position: relative;
+      height: 196px;
+      border: 1px solid rgba(217, 177, 93, 0.24);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 64% 24%, rgba(229, 199, 122, 0.28), transparent 28%),
+        linear-gradient(145deg, rgba(255, 250, 240, 0.95), rgba(229, 220, 201, 0.92));
+      margin-bottom: 16px;
+    }
+
+    .illustration canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .info-title {
+      margin: 0 0 8px;
+      font-size: 25px;
+      line-height: 1.15;
+      letter-spacing: 0.08em;
+    }
+
+    .info-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 15px;
+    }
+
+    .tag {
+      padding: 6px 9px;
+      border: 1px solid rgba(217, 177, 93, 0.22);
+      border-radius: 999px;
+      color: var(--gold-soft);
+      background: rgba(217, 177, 93, 0.07);
+      font: 11px/1 ui-sans-serif, system-ui, sans-serif;
+    }
+
+    .info-block {
+      border-top: 1px solid var(--line);
+      padding-top: 14px;
+      margin-top: 14px;
+    }
+
+    .info-block h3 {
+      margin: 0 0 8px;
+      color: var(--gold);
+      font-size: 13px;
+      letter-spacing: 0.12em;
+    }
+
+    .info-block p {
+      margin: 0;
+      color: #584836;
+      font: 13px/1.75 ui-sans-serif, system-ui, sans-serif;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 15px;
+    }
+
+    .metric {
+      min-width: 0;
+      padding: 10px 8px;
+      border: 1px solid rgba(120, 88, 49, 0.12);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.5);
+      text-align: center;
+    }
+
+    .metric strong {
+      display: block;
+      color: var(--gold-soft);
+      font: 700 17px/1 ui-sans-serif, system-ui, sans-serif;
+      margin-bottom: 7px;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font: 11px/1.2 ui-sans-serif, system-ui, sans-serif;
+    }
+
+    .bottom-strip {
+      position: absolute;
+      right: 18px;
+      bottom: 18px;
+      z-index: 3;
+      width: min(520px, calc(100% - 220px));
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: var(--radius);
+      background: rgba(255, 250, 240, 0.74);
+      backdrop-filter: blur(16px);
+    }
+
+    .progress {
+      height: 7px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.1);
+    }
+
+    .progress span {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, var(--red), var(--gold), var(--jade));
+      border-radius: inherit;
+      transition: width 220ms ease;
+    }
+
+    .toggles {
+      display: grid;
+      gap: 9px;
+      margin-top: 14px;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 10px 11px;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.035);
+      color: #ded4c0;
+      font: 12px/1.25 ui-sans-serif, system-ui, sans-serif;
+    }
+
+    input[type="checkbox"] {
+      width: 36px;
+      height: 20px;
+      appearance: none;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.13);
+      border: 1px solid rgba(255,255,255,0.18);
+      position: relative;
+      cursor: pointer;
+    }
+
+    input[type="checkbox"]::before {
+      content: "";
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      left: 2px;
+      top: 2px;
+      border-radius: 50%;
+      background: #b8ae9b;
+      transition: transform 160ms ease, background 160ms ease;
+    }
+
+    input[type="checkbox"]:checked {
+      background: rgba(217, 177, 93, 0.28);
+      border-color: rgba(242, 216, 154, 0.5);
+    }
+
+    input[type="checkbox"]:checked::before {
+      transform: translateX(16px);
+      background: var(--gold-soft);
+    }
+
+    .loading {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at 50% 36%, rgba(189, 141, 54, 0.18), transparent 26%),
+        #f5eddf;
+      transition: opacity 300ms ease, visibility 300ms ease;
+    }
+
+    .loading.hide {
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    .loading-card {
+      width: min(420px, calc(100vw - 48px));
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: var(--panel-strong);
+      padding: 24px;
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+
+    .loading-card h1 {
+      margin: 0 0 10px;
+      font-size: 23px;
+      letter-spacing: 0.08em;
+    }
+
+    .loading-card p {
+      margin: 0;
+      color: var(--muted);
+      font: 13px/1.6 ui-sans-serif, system-ui, sans-serif;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      top: 86px;
+      z-index: 30;
+      transform: translateX(-50%) translateY(-16px);
+      opacity: 0;
+      pointer-events: none;
+      padding: 10px 13px;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: rgba(255, 250, 240, 0.92);
+      color: var(--gold-soft);
+      font: 12px/1 ui-sans-serif, system-ui, sans-serif;
+      backdrop-filter: blur(16px);
+      transition: opacity 180ms ease, transform 180ms ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media (max-width: 1120px) {
+      .layout {
+        grid-template-columns: 250px minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr) 260px;
+      }
+
+      .right-panel {
+        grid-column: 1 / -1;
+      }
+
+      .info-content {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        gap: 16px;
+      }
+
+      .info-copy {
+        min-width: 0;
+      }
+    }
+
+    @media (max-width: 760px) {
+      body {
+        overflow: auto;
+      }
+
+      #app {
+        height: auto;
+        min-height: 100%;
+        grid-template-rows: auto 1fr;
+      }
+
+      .topbar {
+        grid-template-columns: 1fr;
+        padding: 14px;
+      }
+
+      .mode-tabs,
+      .toolbar {
+        overflow-x: auto;
+        justify-content: flex-start;
+        padding-bottom: 3px;
+      }
+
+      .layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 540px auto;
+        padding: 12px;
+      }
+
+      .panel {
+        max-height: none;
+      }
+
+      .left-panel {
+        order: 2;
+      }
+
+      .stage-wrap {
+        order: 1;
+      }
+
+      .right-panel {
+        order: 3;
+      }
+
+      .component-list {
+        height: auto;
+      }
+
+      .info-content {
+        display: block;
+        height: auto;
+      }
+
+      .bottom-strip {
+        left: 12px;
+        right: 12px;
+        width: auto;
+      }
+
+      .stage-caption {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-kicker">AI 3D Technical Prototype</div>
+        <div class="brand-title">
+          <strong>太和殿</strong>
+          <span>3D 构成分析</span>
+        </div>
+      </div>
+
+      <nav class="mode-tabs" aria-label="交互模式">
+        <button class="mode active" data-mode="explore">探索</button>
+        <button class="mode" data-mode="layers">分层</button>
+        <button class="mode" data-mode="explode">爆炸</button>
+        <button class="mode" data-mode="night">夜游</button>
+        <button class="mode" data-mode="demo">演示</button>
+      </nav>
+
+      <div class="toolbar" aria-label="视角工具">
+        <button class="view" data-view="front">正面</button>
+        <button class="view" data-view="side">侧面</button>
+        <button class="view" data-view="top">俯视</button>
+        <button class="icon" id="resetBtn" title="复位视角">↺</button>
+        <button class="icon" id="shotBtn" title="下载截图">◎</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="panel left-panel">
+        <div class="panel-header">
+          <h2>构件目录</h2>
+          <small>点击定位</small>
+        </div>
+        <div class="component-list" id="componentList"></div>
+      </aside>
+
+      <section class="stage-wrap" id="stageWrap">
+        <canvas id="scene"></canvas>
+        <div class="label-layer" id="labelLayer"></div>
+        <div class="stage-vignette"></div>
+        <div class="stage-caption">
+          <span class="status-dot"></span>
+          <span id="stageHint">拖拽旋转，滚轮缩放，点击建筑部件查看说明</span>
+        </div>
+        <div class="bottom-strip">
+          <button class="icon" id="prevBtn" title="上一步">‹</button>
+          <div class="progress" aria-label="演示进度"><span id="progressBar"></span></div>
+          <button class="icon" id="nextBtn" title="下一步">›</button>
+        </div>
+      </section>
+
+      <aside class="panel right-panel">
+        <div class="panel-header">
+          <h2>图解面板</h2>
+          <small id="modeLabel">探索模式</small>
+        </div>
+        <div class="info-content">
+          <div class="illustration">
+            <canvas id="infoCanvas" width="640" height="380"></canvas>
+          </div>
+          <div class="info-copy">
+            <h1 class="info-title" id="infoTitle">整体建筑</h1>
+            <div class="info-meta" id="infoTags"></div>
+            <div class="info-block">
+              <h3>展示说明</h3>
+              <p id="infoSummary"></p>
+            </div>
+            <div class="info-block">
+              <h3>构造与功能</h3>
+              <p id="infoTech"></p>
+            </div>
+            <div class="metrics">
+              <div class="metric">
+                <strong id="metricA">3D</strong>
+                <span>设计特点</span>
+              </div>
+              <div class="metric">
+                <strong id="metricB">AI</strong>
+                <span>结构功能</span>
+              </div>
+              <div class="metric">
+                <strong id="metricC">中轴</strong>
+                <span>观看重点</span>
+              </div>
+            </div>
+            <div class="info-block">
+              <h3>图层开关</h3>
+              <div class="toggles" id="layerToggles"></div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <div class="loading" id="loading">
+    <div class="loading-card">
+      <h1>正在载入太和殿 3D 资产</h1>
+      <p>载入 Tripo3D 标准模型、绑定构件热点、准备分层与爆炸动画。</p>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three/build/build/three.module.js",
+        "three/addons/": "./vendor/three/examples/examples/jsm/"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import * as THREE from "three";
+    import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+    import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+    const components = [
+      {
+        id: "whole",
+        name: "整体建筑",
+        category: "总览",
+        short: "紫禁城外朝核心大殿，以重檐庑殿顶和高台基体现礼制等级。",
+        tags: ["总览", "数字展陈", "技术原型"],
+        summary: "太和殿俗称“金銮殿”，是紫禁城外朝三大殿之首，明清两代用于举行登基、大婚、册立皇后、命将出征等重大典礼。它的高台、重檐、黄琉璃瓦和密集斗栱共同构成了宫廷建筑最庄重的形象。",
+        tech: "这座大殿的设计重点在“礼制可见”：台基把建筑抬高，柱网形成开阔殿身，斗栱承托深远出檐，重檐庑殿顶则强化中轴线上最高等级的建筑身份。",
+        color: "#bd8d36",
+        imageUrl: "assets/ai/illustration-overview.png",
+        textureUrl: "assets/ai/texture-paper.png",
+        modelUrl: "assets/models/tripo/taihe-components-optimized/overview/overview_web.glb",
+        generatedModelUrl: "assets/models/tripo/taihe-components-optimized/overview/overview_web.glb",
+        provider: "tripo3d",
+        assetStatus: "generated-web-optimized",
+        camera: { position: [8.5, 5.8, 11.5], target: [0, 1.7, 0] },
+        metrics: ["重檐", "礼制", "中轴"]
+      },
+      {
+        id: "roof",
+        name: "屋顶系统",
+        category: "外观主形",
+        short: "重檐庑殿顶是中国古代建筑中等级最高的屋顶形制之一。",
+        tags: ["屋顶", "琉璃瓦", "天际线"],
+        summary: "太和殿采用重檐庑殿顶，前后左右四面斜坡交汇于正脊和垂脊，形体开阔而稳定。黄色琉璃瓦在宫廷建筑中象征皇权，宽大的出檐也让殿身显得更庄严。",
+        tech: "屋顶既遮蔽雨雪、保护木构架，也通过出檐、屋脊和瓦色表达等级。重檐让屋顶形成上下两层节奏，视觉上进一步抬升建筑的威仪。",
+        color: "#c99b42",
+        imageUrl: "assets/ai/illustration-roof.png",
+        textureUrl: "assets/ai/texture-roof-tile.png",
+        modelUrl: "assets/models/tripo/taihe-components-optimized/roof/roof_web.glb",
+        generatedModelUrl: "assets/models/tripo/taihe-components-optimized/roof/roof_web.glb",
+        provider: "tripo3d",
+        assetStatus: "generated-web-optimized",
+        camera: { position: [5.9, 4.5, 7.6], target: [0, 2.95, 0] },
+        explode: [0, 1.25, 0],
+        metrics: ["庑殿", "排水", "屋脊"]
+      },
+      {
+        id: "dougong",
+        name: "斗拱层",
+        category: "承托过渡",
+        short: "斗栱位于柱梁与屋檐之间，是承托出檐和形成檐下节奏的关键构件。",
+        tags: ["斗拱", "承托", "节奏"],
+        summary: "斗栱由斗、栱、昂、翘等构件层层叠出，位于柱头、额枋和屋檐之间。它既是力的传递结构，也是古建筑最具识别度的装饰性构造之一。",
+        tech: "斗栱把屋檐荷载逐级传到柱网，并帮助屋檐向外伸展。密集排列的斗栱在檐下形成阴影和节奏，使宏大的屋顶与殿身之间有了过渡层。",
+        color: "#bf6f38",
+        imageUrl: "assets/ai/illustration-dougong.png",
+        textureUrl: "assets/ai/texture-painted-pattern.png",
+        modelUrl: "assets/models/tripo/taihe-components-optimized/dougong/dougong_web.glb",
+        generatedModelUrl: "assets/models/tripo/taihe-components-optimized/dougong/dougong_web.glb",
+        provider: "tripo3d",
+        assetStatus: "generated-web-optimized",
+        camera: { position: [5.4, 3.3, 5.8], target: [0, 2.28, 0] },
+        explode: [0, 0.65, 0],
+        metrics: ["层叠", "承托", "檐下"]
+      },
+      {
+        id: "columns",
+        name: "柱梁系统",
+        category: "主体支撑",
+        short: "柱梁系统构成殿身骨架，决定建筑开间、进深和内部空间秩序。",
+        tags: ["柱网", "梁架", "空间"],
+        summary: "中国古代宫殿以木构架为主体，柱子承重，梁枋连接柱网并组织空间。朱红柱列让殿身具有强烈的秩序感，也把高大的屋顶稳定地支撑起来。",
+        tech: "柱梁结构的特点是“墙倒屋不塌”的木构架逻辑：重量主要由柱、梁、枋传递，墙体更多承担围护作用。开间越多、尺度越大，越能体现建筑等级。",
+        color: "#a33024",
+        imageUrl: "assets/ai/illustration-columns.png",
+        textureUrl: "assets/ai/texture-red-lacquer.png",
+        modelUrl: "assets/models/tripo/taihe-components-optimized/columns/columns_web.glb",
+        generatedModelUrl: "assets/models/tripo/taihe-components-optimized/columns/columns_web.glb",
+        provider: "tripo3d",
+        assetStatus: "generated-web-optimized",
+        camera: { position: [6.2, 3.0, 5.4], target: [0, 1.55, 0] },
+        explode: [0, 0.1, 0],
+        metrics: ["柱网", "承重", "开间"]
+      },
+      {
+        id: "platform",
+        name: "台基系统",
+        category: "基座",
+        short: "台基抬升殿身，形成仪式入口，也保护木构建筑远离地面潮气。",
+        tags: ["台基", "阶梯", "基座"],
+        summary: "太和殿立于高大的汉白玉台基之上，台阶、栏板、望柱共同组织进入大殿的路径。高台让建筑从广场中被托举出来，形成远观时的威严轮廓。",
+        tech: "台基承担防潮、排水、抬升和礼仪分隔的作用。对于宫殿建筑来说，登上台基的过程本身就是空间礼序的一部分。",
+        color: "#c8baa1",
+        imageUrl: "assets/ai/illustration-platform.png",
+        textureUrl: "assets/ai/texture-stone.png",
+        modelUrl: "assets/models/tripo/taihe-components-optimized/platform/platform_web.glb",
+        generatedModelUrl: "assets/models/tripo/taihe-components-optimized/platform/platform_web.glb",
+        provider: "tripo3d",
+        assetStatus: "generated-web-optimized",
+        camera: { position: [6.6, 2.7, 6.2], target: [0, 0.65, 0] },
+        explode: [0, -0.28, 0],
+        metrics: ["高台", "防潮", "礼序"]
+      },
+      {
+        id: "decor",
+        name: "脊兽装饰",
+        category: "装饰符号",
+        short: "脊兽和鸱吻布置在屋脊端部，兼具装饰、象征和压脊功能。",
+        tags: ["脊兽", "鸱吻", "装饰"],
+        summary: "宫殿屋脊上的鸱吻和走兽是等级标识的重要部分。太和殿屋顶装饰规格极高，脊兽数量和位置都服务于皇权建筑的象征表达。",
+        tech: "脊饰在视觉上收束屋顶线条，也有压住脊瓦、遮护节点的实际作用。走兽从屋角向上排列，形成从细部到整体的礼制秩序。",
+        color: "#d9ad55",
+        imageUrl: "assets/ai/illustration-decor.png",
+        textureUrl: "assets/ai/texture-roof-tile.png",
+        modelUrl: "assets/models/tripo/taihe-components-optimized/decor/decor_web.glb",
+        generatedModelUrl: "assets/models/tripo/taihe-components-optimized/decor/decor_web.glb",
+        provider: "tripo3d",
+        assetStatus: "generated-web-optimized",
+        camera: { position: [3.8, 5.0, 5.2], target: [0, 3.75, 0] },
+        explode: [0, 1.65, 0],
+        metrics: ["脊饰", "象征", "等级"]
+      },
+      {
+        id: "painting",
+        name: "彩画纹样",
+        category: "表皮材质",
+        short: "彩画覆盖梁枋与檐下木构，兼具保护木材和礼制装饰功能。",
+        tags: ["彩画", "纹样", "贴图"],
+        summary: "宫殿彩画常以青绿、朱红、金线构成繁复纹样，覆盖梁、枋、斗栱等木构表面。它既能减缓风雨对木材的侵蚀，也强化建筑的等级和华丽感。",
+        tech: "彩画是古建筑“表皮系统”的重要部分：远看形成统一的色彩秩序，近看则呈现龙凤、云纹、几何边饰等细部。",
+        color: "#54766f",
+        imageUrl: "assets/ai/illustration-painting.png",
+        textureUrl: "assets/ai/texture-painted-pattern.png",
+        modelUrl: "assets/models/tripo/taihe-components-optimized/painting/painting_web.glb",
+        generatedModelUrl: "assets/models/tripo/taihe-components-optimized/painting/painting_web.glb",
+        provider: "tripo3d",
+        assetStatus: "generated-web-optimized",
+        camera: { position: [4.7, 3.0, 4.9], target: [0, 2.0, 0] },
+        explode: [0.55, 0.35, 0],
+        metrics: ["青绿", "保护", "纹样"]
+      }
+    ];
+
+    const componentById = Object.fromEntries(components.map((item) => [item.id, item]));
+    const interactiveIds = components.filter((item) => item.id !== "whole").map((item) => item.id);
+    const canvas = document.querySelector("#scene");
+    const stageWrap = document.querySelector("#stageWrap");
+    const labelLayer = document.querySelector("#labelLayer");
+    const infoCanvas = document.querySelector("#infoCanvas");
+    const infoCtx = infoCanvas.getContext("2d");
+    const renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: true,
+      alpha: true,
+      preserveDrawingBuffer: false,
+      powerPreference: "high-performance"
+    });
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+    const controls = new OrbitControls(camera, renderer.domElement);
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    const palace = new THREE.Group();
+    const componentGroups = new Map();
+    const clickableMeshes = [];
+    const labels = new Map();
+    const originalMaterials = new WeakMap();
+    const basePositions = new Map();
+    const targetGroupPositions = new Map();
+    const activeLayers = new Set(interactiveIds);
+    const textureLoader = new THREE.TextureLoader();
+    const gltfLoader = new GLTFLoader();
+    const loadedTextures = new Map();
+    const illustrationCache = new Map();
+
+    let selectedId = "whole";
+    let currentMode = "explore";
+    let demoTimer = null;
+    let demoIndex = 0;
+    let targetCameraPosition = new THREE.Vector3(...componentById.whole.camera.position);
+    let targetControlTarget = new THREE.Vector3(...componentById.whole.camera.target);
+    let isCameraAnimating = false;
+    let userInteracting = false;
+    let userCameraOverride = false;
+    let targetLight = { intensity: 2.0, ambient: 1.28 };
+    let showLabels = true;
+    let tripoAssetsReady = false;
+    let lastRenderWidth = 0;
+    let lastRenderHeight = 0;
+    let pointerDownInfo = null;
+    const tripoLoadedIds = new Set();
+    const tripoLoadingIds = new Set();
+    const tripoLoadPromises = new Map();
+
+    camera.position.copy(targetCameraPosition);
+    controls.target.copy(targetControlTarget);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.07;
+    controls.minDistance = 5.5;
+    controls.maxDistance = 24;
+    controls.maxPolarAngle = Math.PI * 0.58;
+    controls.addEventListener("start", () => {
+      userInteracting = true;
+      isCameraAnimating = false;
+      userCameraOverride = true;
+      renderer.setPixelRatio(activePixelRatio);
+    });
+    controls.addEventListener("end", () => {
+      userInteracting = false;
+      targetCameraPosition.copy(camera.position);
+      targetControlTarget.copy(controls.target);
+      renderer.setPixelRatio(idlePixelRatio);
+      lastRenderWidth = 0;
+      lastRenderHeight = 0;
+    });
+
+    const idlePixelRatio = Math.min(window.devicePixelRatio, 1.2);
+    const activePixelRatio = Math.min(window.devicePixelRatio, 0.82);
+    renderer.setPixelRatio(idlePixelRatio);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.04;
+
+    scene.background = new THREE.Color(0xf7efe2);
+    const ambient = new THREE.AmbientLight(0xfff4df, 1.28);
+    const fillLight = new THREE.HemisphereLight(0xfff6e6, 0xd0b98a, 0.72);
+    const keyLight = new THREE.DirectionalLight(0xffdfac, 2.0);
+    keyLight.position.set(5, 8, 7);
+    keyLight.castShadow = true;
+    const rimLight = new THREE.PointLight(0x8ab9b4, 1.05, 20);
+    rimLight.position.set(-4, 3, -5);
+    scene.add(ambient, fillLight, keyLight, rimLight);
+
+    const floor = new THREE.Mesh(
+      new THREE.CircleGeometry(8.2, 96),
+      new THREE.MeshStandardMaterial({
+        color: 0xe7dcc6,
+        roughness: 0.86,
+        metalness: 0.08
+      })
+    );
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -0.04;
+    scene.add(floor);
+
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(5.5, 5.56, 128),
+      new THREE.MeshBasicMaterial({ color: 0xbd8d36, transparent: true, opacity: 0.22 })
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.005;
+    scene.add(ring);
+
+    scene.add(palace);
+
+    function createMat(color, options = {}) {
+      return new THREE.MeshStandardMaterial({
+        color,
+        roughness: options.roughness ?? 0.55,
+        metalness: options.metalness ?? 0.12,
+        emissive: options.emissive ?? 0x000000,
+        emissiveIntensity: options.emissiveIntensity ?? 0,
+        transparent: options.transparent ?? false,
+        opacity: options.opacity ?? 1,
+        side: options.side ?? THREE.DoubleSide
+      });
+    }
+
+    const mats = {
+      stone: createMat(0xd3c4a6, { roughness: 0.9 }),
+      stoneDark: createMat(0x9d8c6a, { roughness: 0.95 }),
+      red: createMat(0xa33024, { roughness: 0.46, metalness: 0.05 }),
+      redDark: createMat(0x9a2e22, { roughness: 0.52, emissive: 0x3a120c, emissiveIntensity: 0.08 }),
+      gold: createMat(0xc99b42, { roughness: 0.34, metalness: 0.42 }),
+      goldBright: createMat(0xe5c77a, { roughness: 0.28, metalness: 0.58 }),
+      jade: createMat(0x466f66, { roughness: 0.58, metalness: 0.08 }),
+      cyan: createMat(0x6f9694, { roughness: 0.44 }),
+      shadow: createMat(0xb66b35, { roughness: 0.66, metalness: 0.04, emissive: 0x4a2412, emissiveIntensity: 0.12 }),
+      roof: createMat(0xd6a84f, { roughness: 0.4, metalness: 0.28 })
+    };
+    const materialAliases = {
+      roof: mats.roof,
+      shadow: mats.shadow,
+      red: mats.red,
+      redDark: mats.redDark,
+      stone: mats.stone,
+      stoneDark: mats.stoneDark,
+      gold: mats.gold,
+      goldBright: mats.goldBright,
+      jade: mats.jade,
+      cyan: mats.cyan
+    };
+
+    function loadTexture(url, repeatX = 2, repeatY = 2) {
+      if (!url) return null;
+      if (loadedTextures.has(url)) return loadedTextures.get(url);
+      const texture = textureLoader.load(url);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(repeatX, repeatY);
+      loadedTextures.set(url, texture);
+      return texture;
+    }
+
+    function makePatternTexture(base, line, type = "linear") {
+      const size = 256;
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = base;
+      ctx.fillRect(0, 0, size, size);
+      ctx.strokeStyle = line;
+      ctx.lineWidth = 3;
+      ctx.globalAlpha = 0.48;
+      if (type === "tile") {
+        for (let y = 14; y < size; y += 42) {
+          for (let x = -32; x < size; x += 52) {
+            ctx.beginPath();
+            ctx.arc(x + 26, y, 27, 0, Math.PI);
+            ctx.stroke();
+          }
+          ctx.beginPath();
+          ctx.moveTo(0, y + 16);
+          ctx.lineTo(size, y + 16);
+          ctx.stroke();
+        }
+      } else if (type === "stone") {
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 26; i += 1) {
+          const x = (i * 47) % size;
+          const y = (i * 83) % size;
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo((x + 80 + i * 9) % size, (y + 26 + i * 17) % size);
+          ctx.stroke();
+        }
+      } else if (type === "paint") {
+        for (let x = 18; x < size; x += 42) {
+          ctx.beginPath();
+          ctx.arc(x, 115, 22, 0.2, Math.PI * 1.7);
+          ctx.stroke();
+          ctx.fillStyle = "rgba(201,155,66,0.42)";
+          ctx.fillRect(x - 18, 162, 36, 12);
+        }
+      } else {
+        for (let y = 18; y < size; y += 34) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(size, y + 6);
+          ctx.stroke();
+        }
+      }
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(2, 2);
+      return texture;
+    }
+
+    function applyProjectTextures() {
+      mats.roof.map = makePatternTexture("#d9ab45", "rgba(126,86,24,0.55)", "tile");
+      mats.red.map = makePatternTexture("#b34230", "rgba(101,30,22,0.45)", "linear");
+      mats.redDark.map = mats.red.map;
+      mats.shadow.map = mats.red.map;
+      mats.stone.map = makePatternTexture("#d8cab0", "rgba(126,112,88,0.38)", "stone");
+      mats.stoneDark.map = mats.stone.map;
+      mats.jade.map = makePatternTexture("#55786f", "rgba(229,199,122,0.68)", "paint");
+      mats.cyan.map = mats.jade.map;
+      mats.roof.emissive.set(0x4a3212);
+      mats.roof.emissiveIntensity = 0.18;
+      mats.red.emissive.set(0x35100b);
+      mats.red.emissiveIntensity = 0.14;
+      mats.redDark.emissive.set(0x45140d);
+      mats.redDark.emissiveIntensity = 0.2;
+      mats.shadow.emissive.set(0x5a2a14);
+      mats.shadow.emissiveIntensity = 0.24;
+      mats.stone.emissive.set(0x473c2b);
+      mats.stone.emissiveIntensity = 0.1;
+      mats.stoneDark.emissive.set(0x473c2b);
+      mats.stoneDark.emissiveIntensity = 0.12;
+      Object.values(mats).forEach((mat) => {
+        mat.needsUpdate = true;
+      });
+    }
+
+    function addComponentGroup(id) {
+      const group = new THREE.Group();
+      group.name = id;
+      componentGroups.set(id, group);
+      palace.add(group);
+      basePositions.set(id, group.position.clone());
+      targetGroupPositions.set(id, group.position.clone());
+      return group;
+    }
+
+    function ensureComponentGroup(id) {
+      return componentGroups.get(id) || addComponentGroup(id);
+    }
+
+    function mark(mesh, id) {
+      mesh.userData.componentId = id;
+      for (const [name, material] of Object.entries(materialAliases)) {
+        if (mesh.material === material) {
+          mesh.userData.materialAlias = name;
+          break;
+        }
+      }
+      clickableMeshes.push(mesh);
+      originalMaterials.set(mesh, mesh.material);
+      return mesh;
+    }
+
+    function markModelTree(root, id) {
+      root.traverse((child) => {
+        if (!child.isMesh) return;
+        child.userData.componentId = id;
+        child.castShadow = false;
+        child.receiveShadow = true;
+        if (child.material) {
+          const materials = Array.isArray(child.material) ? child.material : [child.material];
+          materials.forEach((mat) => {
+            if (mat.map) mat.map.colorSpace = THREE.SRGBColorSpace;
+            if (mat.emissiveMap) mat.emissiveMap.colorSpace = THREE.SRGBColorSpace;
+            mat.side = THREE.DoubleSide;
+            mat.needsUpdate = true;
+          });
+        }
+        clickableMeshes.push(child);
+        originalMaterials.set(child, child.material);
+      });
+    }
+
+    function fitImportedModel(root, placement) {
+      const box = new THREE.Box3().setFromObject(root);
+      const size = new THREE.Vector3();
+      const center = new THREE.Vector3();
+      box.getSize(size);
+      box.getCenter(center);
+      root.position.sub(center);
+      const target = placement.size;
+      const scale = Math.min(
+        target[0] / Math.max(size.x, 0.001),
+        target[1] / Math.max(size.y, 0.001),
+        target[2] / Math.max(size.z, 0.001)
+      );
+      root.scale.setScalar(scale * (placement.scale ?? 1));
+      root.position.add(new THREE.Vector3(...placement.position));
+      root.rotation.set(
+        placement.rotation?.[0] ?? 0,
+        placement.rotation?.[1] ?? 0,
+        placement.rotation?.[2] ?? 0
+      );
+    }
+
+    const tripoPlacements = {
+      whole: { position: [0, 1.9, 0], size: [7.2, 4.4, 4.8], scale: 1 },
+      roof: { position: [0, 3.55, 0], size: [6.4, 1.35, 3.8], scale: 1 },
+      dougong: { position: [0, 2.75, 0], size: [5.2, 1.15, 2.0], scale: 1 },
+      columns: { position: [0, 1.65, 0], size: [5.8, 2.5, 3.0], scale: 1 },
+      platform: { position: [0, 0.62, 0], size: [7.0, 1.35, 4.8], scale: 1 },
+      decor: { position: [0, 4.35, 0], size: [4.8, 0.9, 1.4], scale: 1 },
+      painting: { position: [0, 2.25, 0], size: [5.4, 1.5, 2.3], scale: 1 }
+    };
+
+    async function loadTripoModel(id) {
+      const item = componentById[id];
+      if (tripoLoadPromises.has(id)) return tripoLoadPromises.get(id);
+      if (!item?.generatedModelUrl || tripoLoadedIds.has(id)) {
+        return tripoLoadedIds.has(id);
+      }
+      tripoLoadingIds.add(id);
+      const promise = (async () => {
+        try {
+        const gltf = await gltfLoader.loadAsync(item.generatedModelUrl);
+        const group = ensureComponentGroup(id);
+        for (let i = clickableMeshes.length - 1; i >= 0; i -= 1) {
+          if (clickableMeshes[i].userData.componentId === id) clickableMeshes.splice(i, 1);
+        }
+        group.clear();
+        const model = gltf.scene;
+        model.name = `${id}-tripo-model`;
+        fitImportedModel(model, tripoPlacements[id] || tripoPlacements.whole);
+        markModelTree(model, id);
+        group.add(model);
+        basePositions.set(id, group.position.clone());
+        targetGroupPositions.set(id, group.position.clone());
+        tripoLoadedIds.add(id);
+        tripoAssetsReady = true;
+        applyModelVisibility();
+        highlightSelection();
+        return true;
+        } catch (error) {
+          console.warn(`Tripo model load failed: ${id}`, error);
+          return false;
+        } finally {
+          tripoLoadingIds.delete(id);
+          tripoLoadPromises.delete(id);
+        }
+      })();
+      tripoLoadPromises.set(id, promise);
+      return promise;
+    }
+
+    function loadVisibleTripoModels() {
+      if (selectedId === "whole") {
+        loadTripoModel("whole");
+        return;
+      }
+      loadTripoModel(selectedId);
+      if (currentMode === "layers" || currentMode === "explode") {
+        interactiveIds.forEach((id) => {
+          if (activeLayers.has(id)) loadTripoModel(id);
+        });
+      }
+    }
+
+    function disposeMaterial(material) {
+      if (!material) return;
+      const materials = Array.isArray(material) ? material : [material];
+      materials.forEach((mat) => {
+        Object.values(mat).forEach((value) => {
+          if (value?.isTexture) value.dispose();
+        });
+        mat.dispose();
+      });
+    }
+
+    function unloadTripoModel(id) {
+      if (!tripoLoadedIds.has(id) || tripoLoadingIds.has(id)) return;
+      const group = componentGroups.get(id);
+      if (!group) return;
+      group.traverse((child) => {
+        if (child.isMesh) {
+          child.geometry?.dispose();
+          disposeMaterial(child.material);
+        }
+      });
+      for (let i = clickableMeshes.length - 1; i >= 0; i -= 1) {
+        if (clickableMeshes[i].userData.componentId === id) clickableMeshes.splice(i, 1);
+      }
+      group.clear();
+      tripoLoadedIds.delete(id);
+    }
+
+    function unloadInactiveTripoModels() {
+      if (currentMode === "layers" || currentMode === "explode") {
+        tripoLoadedIds.forEach((id) => {
+          if (id !== "whole" && !activeLayers.has(id)) unloadTripoModel(id);
+          if (id === "whole") unloadTripoModel(id);
+        });
+        return;
+      }
+      tripoLoadedIds.forEach((id) => {
+        if (id !== selectedId) unloadTripoModel(id);
+      });
+    }
+
+    function applyModelVisibility() {
+      if (!tripoAssetsReady) return;
+      for (const [id, group] of componentGroups.entries()) {
+        if (id === "whole") {
+          group.visible = selectedId === "whole" && currentMode !== "layers" && currentMode !== "explode";
+          continue;
+        }
+        if (!interactiveIds.includes(id)) {
+          group.visible = true;
+          continue;
+        }
+        if (currentMode === "layers" || currentMode === "explode") {
+          group.visible = activeLayers.has(id);
+        } else if (selectedId === "whole") {
+          group.visible = false;
+        } else {
+          group.visible = id === selectedId && activeLayers.has(id);
+        }
+      }
+      unloadInactiveTripoModels();
+    }
+
+    function box(id, size, pos, mat, parent) {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(size[0], size[1], size[2]), mat);
+      mesh.position.set(pos[0], pos[1], pos[2]);
+      mesh.castShadow = false;
+      mesh.receiveShadow = true;
+      parent.add(mark(mesh, id));
+      return mesh;
+    }
+
+    function cyl(id, radius, height, pos, mat, parent, segments = 32) {
+      const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, height, segments), mat);
+      mesh.position.set(pos[0], pos[1], pos[2]);
+      mesh.castShadow = false;
+      mesh.receiveShadow = true;
+      parent.add(mark(mesh, id));
+      return mesh;
+    }
+
+    function hippedRoofGeometry(width, depth, height, inset = 1.1) {
+      const w = width / 2;
+      const d = depth / 2;
+      const tw = Math.max(0.2, w - inset);
+      const td = Math.max(0.2, d - inset * 0.62);
+      const vertices = new Float32Array([
+        -w, 0, -d, w, 0, -d, w, 0, d, -w, 0, d,
+        -tw, height, -td, tw, height, -td, tw, height, td, -tw, height, td
+      ]);
+      const indices = [
+        0, 1, 5, 0, 5, 4,
+        1, 2, 6, 1, 6, 5,
+        2, 3, 7, 2, 7, 6,
+        3, 0, 4, 3, 4, 7,
+        4, 5, 6, 4, 6, 7,
+        0, 3, 2, 0, 2, 1
+      ];
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
+      geometry.setIndex(indices);
+      geometry.computeVertexNormals();
+      return geometry;
+    }
+
+    function addRoofTier(parent, y, width, depth, height, id) {
+      const roof = new THREE.Mesh(hippedRoofGeometry(width, depth, height, 1.05), mats.roof);
+      roof.position.y = y;
+      roof.castShadow = false;
+      roof.receiveShadow = false;
+      parent.add(mark(roof, id));
+
+      const ridge = box(id, [width * 0.38, 0.08, 0.12], [0, y + height + 0.05, 0], mats.goldBright, parent);
+      ridge.rotation.y = 0;
+
+      for (let i = -5; i <= 5; i += 1) {
+        const x = i * (width / 12);
+        const line = box(id, [0.025, 0.035, depth * 0.9], [x, y + height * 0.46, 0], mats.gold, parent);
+        line.rotation.z = i < 0 ? -0.08 : 0.08;
+      }
+
+      return roof;
+    }
+
+    function buildPlatform() {
+      const group = addComponentGroup("platform");
+      box("platform", [7.1, 0.28, 4.9], [0, 0.14, 0], mats.stoneDark, group);
+      box("platform", [6.4, 0.24, 4.25], [0, 0.42, 0], mats.stone, group);
+      box("platform", [5.7, 0.22, 3.65], [0, 0.68, 0], mats.stone, group);
+      for (let i = 0; i < 5; i += 1) {
+        box("platform", [1.6, 0.08, 0.34], [0, 0.16 + i * 0.11, 2.55 + i * 0.27], mats.stone, group);
+      }
+      for (const z of [-2.35, 2.15]) {
+        for (let i = -5; i <= 5; i += 1) {
+          cyl("platform", 0.035, 0.42, [i * 0.56, 0.92, z], mats.stone, group, 12);
+        }
+        box("platform", [6.1, 0.045, 0.045], [0, 1.13, z], mats.stone, group);
+      }
+      for (const x of [-3.05, 3.05]) {
+        for (let i = -3; i <= 3; i += 1) {
+          cyl("platform", 0.035, 0.42, [x, 0.92, i * 0.58], mats.stone, group, 12);
+        }
+        box("platform", [0.045, 0.045, 3.8], [x, 1.13, 0], mats.stone, group);
+      }
+    }
+
+    function buildColumns() {
+      const group = addComponentGroup("columns");
+      const xs = [-2.25, -0.75, 0.75, 2.25];
+      const zs = [-1.2, 1.2];
+      for (const x of xs) {
+        for (const z of zs) {
+          cyl("columns", 0.105, 1.48, [x, 1.52, z], mats.red, group, 32);
+          cyl("columns", 0.13, 0.08, [x, 0.75, z], mats.gold, group, 32);
+          cyl("columns", 0.12, 0.07, [x, 2.29, z], mats.gold, group, 32);
+        }
+      }
+      for (const z of [-1.38, 1.38]) {
+        box("columns", [5.4, 0.14, 0.16], [0, 2.33, z], mats.redDark, group);
+        box("painting", [5.2, 0.055, 0.19], [0, 2.46, z], mats.cyan, group);
+        for (let i = -4; i <= 4; i += 1) {
+          box("painting", [0.025, 0.08, 0.2], [i * 0.58, 2.47, z], mats.goldBright, group);
+        }
+      }
+      for (const x of [-2.55, 2.55]) {
+        box("columns", [0.16, 0.13, 2.9], [x, 2.33, 0], mats.redDark, group);
+      }
+    }
+
+    function buildDougong() {
+      const group = addComponentGroup("dougong");
+      const xs = [-2.55, -1.9, -1.25, -0.62, 0, 0.62, 1.25, 1.9, 2.55];
+      for (const z of [-1.52, 1.52]) {
+        for (const x of xs) {
+          box("dougong", [0.34, 0.13, 0.2], [x, 2.62, z], mats.gold, group);
+          box("dougong", [0.22, 0.13, 0.34], [x, 2.78, z], mats.red, group);
+          box("dougong", [0.46, 0.1, 0.16], [x, 2.93, z], mats.goldBright, group);
+        }
+      }
+      for (const x of [-2.9, 2.9]) {
+        for (const z of [-1.0, -0.45, 0.1, 0.65, 1.2]) {
+          box("dougong", [0.2, 0.12, 0.32], [x, 2.67, z], mats.gold, group);
+          box("dougong", [0.34, 0.1, 0.18], [x, 2.84, z], mats.red, group);
+        }
+      }
+    }
+
+    function buildRoof() {
+      const group = addComponentGroup("roof");
+      addRoofTier(group, 3.02, 6.6, 4.25, 0.7, "roof");
+      box("roof", [5.4, 0.18, 3.2], [0, 3.03, 0], mats.shadow, group);
+      addRoofTier(group, 3.78, 4.8, 3.0, 0.55, "roof");
+      box("roof", [3.8, 0.16, 2.15], [0, 3.78, 0], mats.shadow, group);
+    }
+
+    function buildDecor() {
+      const group = addComponentGroup("decor");
+      for (const x of [-1.45, -0.95, -0.45, 0.45, 0.95, 1.45]) {
+        const beast = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.24, 5), mats.goldBright);
+        beast.position.set(x, 4.44, 0.03);
+        beast.rotation.x = Math.PI * 0.5;
+        group.add(mark(beast, "decor"));
+      }
+      for (const x of [-2.05, 2.05]) {
+        const chiwen = new THREE.Group();
+        const base = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.46, 6), mats.goldBright);
+        base.rotation.z = x < 0 ? -Math.PI * 0.5 : Math.PI * 0.5;
+        chiwen.add(mark(base, "decor"));
+        const orb = new THREE.Mesh(new THREE.SphereGeometry(0.11, 18, 14), mats.gold);
+        orb.position.y = 0.17;
+        chiwen.add(mark(orb, "decor"));
+        chiwen.position.set(x, 4.4, 0);
+        group.add(chiwen);
+      }
+    }
+
+    function buildPaintingOverlay() {
+      const group = addComponentGroup("painting");
+      for (const z of [-1.58, 1.58]) {
+        for (let i = -5; i <= 5; i += 1) {
+          const plaque = box("painting", [0.32, 0.09, 0.035], [i * 0.48, 2.17, z], mats.jade, group);
+          plaque.material = plaque.material.clone();
+          plaque.material.emissive.set(0x123c38);
+          plaque.material.emissiveIntensity = 0.08;
+          box("painting", [0.18, 0.025, 0.042], [i * 0.48, 2.18, z], mats.goldBright, group);
+        }
+      }
+    }
+
+    function buildPalace() {
+      buildPlatform();
+      buildColumns();
+      buildDougong();
+      buildRoof();
+      buildDecor();
+      buildPaintingOverlay();
+
+      palace.position.y = -0.2;
+      for (const [id, group] of componentGroups.entries()) {
+        basePositions.set(id, group.position.clone());
+        targetGroupPositions.set(id, group.position.clone());
+      }
+    }
+
+    function createLabels() {
+      labelLayer.innerHTML = "";
+      const anchors = {
+        roof: new THREE.Vector3(0, 4.25, -0.9),
+        dougong: new THREE.Vector3(2.85, 2.8, 1.35),
+        columns: new THREE.Vector3(-2.35, 1.75, 1.25),
+        platform: new THREE.Vector3(2.7, 0.72, 2.1),
+        decor: new THREE.Vector3(1.55, 4.5, 0),
+        painting: new THREE.Vector3(-2.4, 2.2, -1.58)
+      };
+      for (const id of interactiveIds) {
+        const el = document.createElement("div");
+        el.className = "scene-label";
+        el.textContent = componentById[id].name;
+        labelLayer.appendChild(el);
+        labels.set(id, { el, anchor: anchors[id] });
+      }
+    }
+
+    function renderComponentList() {
+      const list = document.querySelector("#componentList");
+      list.innerHTML = "";
+      components.forEach((item, index) => {
+        const card = document.createElement("article");
+        card.className = "component-card";
+        card.dataset.id = item.id;
+        card.innerHTML = `
+          <img class="component-thumb" src="${item.imageUrl}" alt="" />
+          <div class="component-index">${String(index + 1).padStart(2, "0")}</div>
+          <h3>${item.name}</h3>
+          <p>${item.short}</p>
+        `;
+        card.addEventListener("click", () => selectComponent(item.id));
+        list.appendChild(card);
+      });
+    }
+
+    function renderLayerToggles() {
+      const wrap = document.querySelector("#layerToggles");
+      wrap.innerHTML = "";
+      for (const id of interactiveIds) {
+        const row = document.createElement("label");
+        row.className = "toggle-row";
+        row.innerHTML = `
+          <span>${componentById[id].name}</span>
+          <input type="checkbox" checked data-layer="${id}" />
+        `;
+        row.querySelector("input").addEventListener("change", (event) => {
+          if (event.target.checked) activeLayers.add(id);
+          else activeLayers.delete(id);
+          const group = componentGroups.get(id);
+          if (group) group.visible = event.target.checked;
+          applyModelVisibility();
+          if (event.target.checked && (currentMode === "layers" || currentMode === "explode")) loadTripoModel(id);
+          showToast(`${componentById[id].name}${event.target.checked ? "已显示" : "已隐藏"}`);
+        });
+        wrap.appendChild(row);
+      }
+    }
+
+    function drawIllustration(item) {
+      const ctx = infoCtx;
+      const w = infoCanvas.width;
+      const h = infoCanvas.height;
+      if (!item.imageUrl) {
+        drawFallbackIllustration(item);
+        return;
+      }
+      const cached = illustrationCache.get(item.imageUrl);
+      if (cached && cached.complete && cached.naturalWidth) {
+        ctx.clearRect(0, 0, w, h);
+        drawImageCover(ctx, cached, 0, 0, w, h);
+        return;
+      }
+      const img = new Image();
+      illustrationCache.set(item.imageUrl, img);
+      img.onload = () => {
+        if (selectedId !== item.id) return;
+        ctx.clearRect(0, 0, w, h);
+        drawImageCover(ctx, img, 0, 0, w, h);
+      };
+      img.onerror = () => drawFallbackIllustration(item);
+      img.src = item.imageUrl;
+      drawFallbackIllustration(item);
+    }
+
+    function drawImageCover(ctx, img, x, y, w, h) {
+      const bg = ctx.createLinearGradient(0, 0, w, h);
+      bg.addColorStop(0, "#fbf7ed");
+      bg.addColorStop(1, "#efe3cf");
+      ctx.fillStyle = bg;
+      ctx.fillRect(x, y, w, h);
+      const scale = Math.min(w / img.naturalWidth, h / img.naturalHeight);
+      const sw = w / scale;
+      const sh = h / scale;
+      const sx = (img.naturalWidth - sw) / 2;
+      const sy = (img.naturalHeight - sh) / 2;
+      const dw = img.naturalWidth * scale;
+      const dh = img.naturalHeight * scale;
+      ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+    }
+
+    function drawFallbackIllustration(item) {
+      const ctx = infoCtx;
+      const w = infoCanvas.width;
+      const h = infoCanvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      const gradient = ctx.createLinearGradient(0, 0, w, h);
+      gradient.addColorStop(0, "#fbf7ed");
+      gradient.addColorStop(0.45, "#efe3cf");
+      gradient.addColorStop(1, "#e6dcc9");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, w, h);
+
+      for (let i = 0; i < 70; i += 1) {
+        ctx.fillStyle = `rgba(242,216,154,${Math.random() * 0.12})`;
+        ctx.fillRect(Math.random() * w, Math.random() * h, 1, 1);
+      }
+
+      ctx.strokeStyle = "rgba(242,216,154,0.2)";
+      ctx.lineWidth = 1;
+      for (let x = 30; x < w; x += 42) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x + 25, h);
+        ctx.stroke();
+      }
+
+      const accent = item.color || "#d9b15d";
+      ctx.save();
+      ctx.translate(w / 2, h / 2 + 24);
+      ctx.shadowColor = accent;
+      ctx.shadowBlur = 26;
+      ctx.fillStyle = "rgba(15, 14, 11, 0.58)";
+      ctx.fillRect(-176, 92, 352, 20);
+      ctx.shadowBlur = 0;
+
+      if (item.id === "roof" || item.id === "whole") {
+        drawRoofIcon(ctx, accent);
+      }
+      if (item.id === "dougong") {
+        drawDougongIcon(ctx, accent);
+      }
+      if (item.id === "columns") {
+        drawColumnIcon(ctx, accent);
+      }
+      if (item.id === "platform") {
+        drawPlatformIcon(ctx, accent);
+      }
+      if (item.id === "decor") {
+        drawDecorIcon(ctx, accent);
+      }
+      if (item.id === "painting") {
+        drawPatternIcon(ctx, accent);
+      }
+
+      ctx.restore();
+
+      ctx.fillStyle = "rgba(241,236,224,0.92)";
+      ctx.font = "700 34px 'Noto Serif SC', serif";
+      ctx.fillText(item.name, 26, 56);
+      ctx.fillStyle = "rgba(217,177,93,0.9)";
+      ctx.font = "500 16px system-ui, sans-serif";
+      ctx.fillText(item.category, 28, 86);
+
+      ctx.strokeStyle = "rgba(242,216,154,0.72)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(28, 105);
+      ctx.lineTo(150, 105);
+      ctx.stroke();
+    }
+
+    function drawRoofIcon(ctx, accent) {
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.moveTo(-190, 18);
+      ctx.lineTo(-95, -58);
+      ctx.lineTo(95, -58);
+      ctx.lineTo(190, 18);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#7e271f";
+      ctx.fillRect(-150, 18, 300, 44);
+      ctx.fillStyle = "#d9b15d";
+      ctx.fillRect(-120, -86, 240, 20);
+      ctx.fillStyle = "#a33024";
+      for (let i = -4; i <= 4; i += 1) ctx.fillRect(i * 32 - 3, -48, 6, 95);
+    }
+
+    function drawDougongIcon(ctx, accent) {
+      ctx.fillStyle = "#a33024";
+      for (let y = -54; y <= 42; y += 32) {
+        for (let x = -120; x <= 120; x += 60) {
+          ctx.fillRect(x - 22, y - 9, 44, 18);
+        }
+      }
+      ctx.fillStyle = accent;
+      for (let y = -38; y <= 58; y += 32) {
+        for (let x = -90; x <= 90; x += 60) {
+          ctx.fillRect(x - 16, y - 16, 32, 32);
+        }
+      }
+    }
+
+    function drawColumnIcon(ctx, accent) {
+      ctx.fillStyle = accent;
+      ctx.fillRect(-155, -70, 310, 22);
+      ctx.fillRect(-155, 60, 310, 22);
+      ctx.fillStyle = "#a33024";
+      for (let x of [-105, -35, 35, 105]) {
+        ctx.beginPath();
+        ctx.roundRect(x - 13, -50, 26, 110, 13);
+        ctx.fill();
+      }
+    }
+
+    function drawPlatformIcon(ctx, accent) {
+      ctx.fillStyle = "#cec0a6";
+      ctx.fillRect(-175, 52, 350, 36);
+      ctx.fillStyle = "#b1a182";
+      ctx.fillRect(-140, 18, 280, 34);
+      ctx.fillStyle = accent;
+      ctx.fillRect(-95, -16, 190, 34);
+      for (let i = 0; i < 5; i += 1) {
+        ctx.fillStyle = `rgba(255,255,255,${0.14 - i * 0.015})`;
+        ctx.fillRect(-50 + i * 20, 88 + i * 8, 100 - i * 10, 8);
+      }
+    }
+
+    function drawDecorIcon(ctx, accent) {
+      ctx.fillStyle = accent;
+      for (let i = -3; i <= 3; i += 1) {
+        ctx.beginPath();
+        ctx.moveTo(i * 42, -58);
+        ctx.lineTo(i * 42 - 16, 10);
+        ctx.lineTo(i * 42 + 16, 10);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(i * 42, -68, 8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillRect(-170, 28, 340, 20);
+    }
+
+    function drawPatternIcon(ctx, accent) {
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = 8;
+      for (let i = 0; i < 5; i += 1) {
+        ctx.beginPath();
+        ctx.arc(-90 + i * 45, -10, 34, 0, Math.PI * 1.55);
+        ctx.stroke();
+      }
+      ctx.fillStyle = "#a33024";
+      ctx.fillRect(-170, 48, 340, 30);
+      ctx.fillStyle = "#8fbec5";
+      ctx.fillRect(-150, 56, 300, 14);
+    }
+
+    function updateInfoPanel(item) {
+      document.querySelector("#infoTitle").textContent = item.name;
+      document.querySelector("#infoSummary").textContent = item.summary;
+      document.querySelector("#infoTech").textContent = item.tech;
+      document.querySelector("#metricA").textContent = item.metrics[0];
+      document.querySelector("#metricB").textContent = item.metrics[1];
+      document.querySelector("#metricC").textContent = item.metrics[2];
+      const tagWrap = document.querySelector("#infoTags");
+      tagWrap.innerHTML = "";
+      item.tags.forEach((tag) => {
+        const el = document.createElement("span");
+        el.className = "tag";
+        el.textContent = tag;
+        tagWrap.appendChild(el);
+      });
+      drawIllustration(item);
+    }
+
+    function selectComponent(id, options = {}) {
+      selectedId = id;
+      const item = componentById[id];
+      document.querySelectorAll(".component-card").forEach((card) => {
+        card.classList.toggle("active", card.dataset.id === id);
+      });
+      updateInfoPanel(item);
+      startCameraFlight(item.camera);
+      highlightSelection();
+      applyModelVisibility();
+      loadVisibleTripoModels();
+      if (!options.silent) {
+        showToast(`已定位：${item.name}`);
+      }
+      const idx = Math.max(0, components.findIndex((entry) => entry.id === id));
+      document.querySelector("#progressBar").style.width = `${(idx / (components.length - 1)) * 100}%`;
+    }
+
+    function highlightSelection() {
+      clickableMeshes.forEach((mesh) => {
+        const original = originalMaterials.get(mesh);
+        const alias = mesh.userData.materialAlias;
+        const currentOriginal = alias ? materialAliases[alias] : original;
+        if (mesh.material !== currentOriginal) mesh.material = currentOriginal;
+      });
+      if (selectedId === "whole") return;
+      const item = componentById[selectedId];
+      clickableMeshes.forEach((mesh) => {
+        if (mesh.userData.componentId === selectedId) {
+          const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+          const highlighted = materials.map((source) => {
+            const mat = source.clone();
+            mat.emissive = new THREE.Color(item.color);
+            mat.emissiveIntensity = 0.24;
+            if (mat.color) mat.color = mat.color.clone().lerp(new THREE.Color(item.color), 0.12);
+            return mat;
+          });
+          mesh.material = Array.isArray(mesh.material) ? highlighted : highlighted[0];
+        }
+      });
+    }
+
+    function startCameraFlight(cameraConfig) {
+      targetCameraPosition = new THREE.Vector3(...cameraConfig.position);
+      targetControlTarget = new THREE.Vector3(...cameraConfig.target);
+      isCameraAnimating = true;
+      userInteracting = false;
+      userCameraOverride = false;
+    }
+
+    function fitBuildingView() {
+      if (selectedId === "whole" && !userCameraOverride && !userInteracting && !isCameraAnimating && currentMode !== "demo") {
+        const aspect = Math.max(0.8, camera.aspect || 1);
+        const distance = aspect < 1.05 ? 14.5 : 12.1;
+        targetCameraPosition.set(distance * 0.68, 5.8, distance);
+        targetControlTarget.set(0, 1.7, 0);
+        camera.position.lerp(targetCameraPosition, 0.025);
+        controls.target.lerp(targetControlTarget, 0.025);
+      }
+    }
+
+    function setMode(mode) {
+      currentMode = mode;
+      document.querySelectorAll(".mode").forEach((btn) => btn.classList.toggle("active", btn.dataset.mode === mode));
+      document.querySelector("#modeLabel").textContent = {
+        explore: "探索模式",
+        layers: "分层模式",
+        explode: "爆炸模式",
+        night: "夜游模式",
+        demo: "演示模式"
+      }[mode];
+
+      stopDemo();
+      showLabels = mode !== "night";
+
+      if (mode === "explode") {
+        applyExplode(true);
+        showToast("爆炸分解已开启");
+      } else {
+        applyExplode(false);
+      }
+
+      if (mode === "layers") {
+        document.querySelector("#stageHint").textContent = "分层模式：右侧开关图层，当前视角由你自由控制";
+        showToast("可在右侧开关各个图层");
+      }
+
+      if (mode === "night") {
+        targetLight = { intensity: 0.85, ambient: 0.24 };
+        renderer.toneMappingExposure = 0.86;
+        showToast("夜游光照已切换");
+      } else {
+        targetLight = { intensity: 2.0, ambient: 1.28 };
+        renderer.toneMappingExposure = 1.04;
+      }
+
+      if (mode === "demo") {
+        startDemo();
+      }
+      applyModelVisibility();
+      loadVisibleTripoModels();
+    }
+
+    function applyExplode(on) {
+      for (const id of interactiveIds) {
+        const group = componentGroups.get(id);
+        if (!group) continue;
+        const base = basePositions.get(id);
+        const offset = componentById[id].explode || [0, 0, 0];
+        const target = on
+          ? new THREE.Vector3(base.x + offset[0], base.y + offset[1], base.z + offset[2])
+          : base.clone();
+        targetGroupPositions.set(id, target);
+      }
+    }
+
+    function startDemo() {
+      demoIndex = 0;
+      const sequence = ["whole", "platform", "columns", "dougong", "roof", "decor", "painting"];
+      selectComponent(sequence[demoIndex], { silent: true });
+      applyExplode(false);
+      demoTimer = window.setInterval(() => {
+        demoIndex = (demoIndex + 1) % sequence.length;
+        selectComponent(sequence[demoIndex], { silent: true });
+        if (demoIndex === 3) applyExplode(true);
+        if (demoIndex === 0) applyExplode(false);
+      }, 2600);
+      showToast("演示模式开始");
+    }
+
+    function stopDemo() {
+      if (demoTimer) {
+        window.clearInterval(demoTimer);
+        demoTimer = null;
+      }
+    }
+
+    function setView(view) {
+      const views = {
+        front: { position: [0, 3.2, 9.8], target: [0, 1.85, 0] },
+        side: { position: [9.4, 3.1, 0.35], target: [0, 1.8, 0] },
+        top: { position: [0.1, 11.5, 0.1], target: [0, 1.1, 0] }
+      };
+      startCameraFlight(views[view]);
+      showToast({ front: "正面视角", side: "侧面视角", top: "俯视视角" }[view]);
+    }
+
+    function onPointerMove(event) {
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      const hits = raycaster.intersectObjects(clickableMeshes, false);
+      renderer.domElement.style.cursor = hits.length ? "pointer" : "grab";
+    }
+
+    function onPointerDown(event) {
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      const hits = raycaster.intersectObjects(clickableMeshes, false);
+      pointerDownInfo = {
+        x: event.clientX,
+        y: event.clientY,
+        time: performance.now(),
+        id: hits[0]?.object.userData.componentId || null
+      };
+    }
+
+    function onPointerUp(event) {
+      if (!pointerDownInfo) return;
+      const dx = event.clientX - pointerDownInfo.x;
+      const dy = event.clientY - pointerDownInfo.y;
+      const distance = Math.hypot(dx, dy);
+      const elapsed = performance.now() - pointerDownInfo.time;
+      const id = pointerDownInfo.id;
+      pointerDownInfo = null;
+      if (!id || distance > 6 || elapsed > 450) return;
+      selectComponent(id);
+    }
+
+    function onPointerCancel() {
+      pointerDownInfo = null;
+    }
+
+    function updateLabels() {
+      const rect = stageWrap.getBoundingClientRect();
+      labels.forEach(({ el, anchor }, id) => {
+        const world = anchor.clone();
+        palace.localToWorld(world);
+        world.project(camera);
+        const x = (world.x * 0.5 + 0.5) * rect.width;
+        const y = (-world.y * 0.5 + 0.5) * rect.height;
+        const group = componentGroups.get(id);
+        const visible = showLabels && activeLayers.has(id) && (!tripoAssetsReady || group?.visible) && world.z < 1;
+        el.style.left = `${x}px`;
+        el.style.top = `${y}px`;
+        el.classList.toggle("show", visible);
+        el.style.transform = `translate(-50%, -50%) scale(${selectedId === id ? 1.08 : 1})`;
+      });
+    }
+
+    function resize() {
+      const rect = stageWrap.getBoundingClientRect();
+      const width = Math.max(1, Math.floor(rect.width));
+      const height = Math.max(1, Math.floor(rect.height));
+      if (width === lastRenderWidth && height === lastRenderHeight) return;
+      lastRenderWidth = width;
+      lastRenderHeight = height;
+      renderer.setSize(width, height, false);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      resize();
+
+      if (isCameraAnimating) {
+        camera.position.lerp(targetCameraPosition, 0.055);
+        controls.target.lerp(targetControlTarget, 0.065);
+        if (camera.position.distanceTo(targetCameraPosition) < 0.035 && controls.target.distanceTo(targetControlTarget) < 0.025) {
+          camera.position.copy(targetCameraPosition);
+          controls.target.copy(targetControlTarget);
+          isCameraAnimating = false;
+        }
+      } else {
+        fitBuildingView();
+      }
+      controls.update();
+
+      keyLight.intensity += (targetLight.intensity - keyLight.intensity) * 0.05;
+      ambient.intensity += (targetLight.ambient - ambient.intensity) * 0.05;
+
+      for (const [id, group] of componentGroups.entries()) {
+        const target = targetGroupPositions.get(id);
+        if (target) group.position.lerp(target, 0.07);
+      }
+
+      palace.rotation.y += currentMode === "demo" ? 0.001 : 0;
+      updateLabels();
+      renderer.render(scene, camera);
+    }
+
+    function showToast(message) {
+      const toast = document.querySelector("#toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => toast.classList.remove("show"), 1300);
+    }
+
+    function downloadScreenshot() {
+      renderer.render(scene, camera);
+      renderer.domElement.toBlob((blob) => {
+        if (!blob) {
+          showToast("截图生成失败");
+          return;
+        }
+        const link = document.createElement("a");
+        link.download = `taihe-hall-3d-${Date.now()}.png`;
+        link.href = URL.createObjectURL(blob);
+        link.click();
+        window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+        showToast("截图已生成");
+      }, "image/png");
+    }
+
+    function bindUI() {
+      document.querySelectorAll(".mode").forEach((btn) => btn.addEventListener("click", () => setMode(btn.dataset.mode)));
+      document.querySelectorAll(".view").forEach((btn) => btn.addEventListener("click", () => setView(btn.dataset.view)));
+      document.querySelector("#resetBtn").addEventListener("click", () => {
+        setMode("explore");
+        selectComponent("whole");
+      });
+      document.querySelector("#shotBtn").addEventListener("click", downloadScreenshot);
+      document.querySelector("#prevBtn").addEventListener("click", () => {
+        const current = Math.max(0, components.findIndex((item) => item.id === selectedId));
+        const next = (current - 1 + components.length) % components.length;
+        selectComponent(components[next].id);
+      });
+      document.querySelector("#nextBtn").addEventListener("click", () => {
+        const current = Math.max(0, components.findIndex((item) => item.id === selectedId));
+        const next = (current + 1) % components.length;
+        selectComponent(components[next].id);
+      });
+      renderer.domElement.addEventListener("pointermove", onPointerMove);
+      renderer.domElement.addEventListener("pointerdown", onPointerDown);
+      renderer.domElement.addEventListener("pointerup", onPointerUp);
+      renderer.domElement.addEventListener("pointerleave", onPointerCancel);
+      renderer.domElement.addEventListener("pointercancel", onPointerCancel);
+      window.addEventListener("resize", resize);
+      window.addEventListener("keydown", (event) => {
+        if (event.key === " ") {
+          event.preventDefault();
+          setMode(currentMode === "demo" ? "explore" : "demo");
+        }
+        if (event.key === "Escape") selectComponent("whole");
+      });
+    }
+
+    if (!CanvasRenderingContext2D.prototype.roundRect) {
+      CanvasRenderingContext2D.prototype.roundRect = function(x, y, width, height, radius) {
+        const r = Math.min(radius, width / 2, height / 2);
+        this.beginPath();
+        this.moveTo(x + r, y);
+        this.arcTo(x + width, y, x + width, y + height, r);
+        this.arcTo(x + width, y + height, x, y + height, r);
+        this.arcTo(x, y + height, x, y, r);
+        this.arcTo(x, y, x + width, y, r);
+        this.closePath();
+        return this;
+      };
+    }
+
+    applyProjectTextures();
+    buildPalace();
+    createLabels();
+    renderComponentList();
+    renderLayerToggles();
+    bindUI();
+    selectComponent("whole", { silent: true });
+    resize();
+    animate();
+
+    window.__taiheReady = true;
+    loadTripoModel("whole").then((loaded) => {
+      selectComponent(selectedId, { silent: true });
+      document.querySelector("#loading").classList.add("hide");
+      showToast(loaded ? "已载入 Tripo3D 标准模型" : "使用程序化兜底模型");
+    }).catch((error) => {
+      console.warn("Tripo model loading failed", error);
+      document.querySelector("#loading").classList.add("hide");
+      showToast("模型资产载入失败，已使用兜底模型");
+    });
+  </script>
+
+  <script>
+    window.setTimeout(function() {
+      if (window.__taiheReady) return;
+
+      const fallbackComponents = [
+        {
+          id: "whole",
+          name: "整体建筑",
+          category: "总览",
+          short: "紫禁城外朝核心大殿，以重檐庑殿顶和高台基体现礼制等级。",
+          tags: ["总览", "离线兜底", "技术原型"],
+          summary: "太和殿俗称“金銮殿”，是紫禁城外朝三大殿之首，用于举行登基、大婚、册立皇后等重大典礼。高台、重檐、黄琉璃瓦和密集斗栱共同构成最庄重的宫廷建筑形象。",
+          tech: "这座大殿的设计重点在礼制可见：台基抬升建筑，柱网形成开阔殿身，斗栱承托深远出檐，重檐庑殿顶强化中轴线上最高等级的建筑身份。",
+          color: "#d9b15d",
+          metrics: ["兜底", "可点", "可演示"]
+        },
+        {
+          id: "roof",
+          name: "屋顶系统",
+          category: "外观主形",
+          short: "重檐庑殿顶的风格化表达，是第一眼识别太和殿的主体。",
+          tags: ["屋顶", "琉璃瓦", "天际线"],
+          summary: "太和殿采用重檐庑殿顶，四面斜坡交汇于正脊和垂脊，黄色琉璃瓦象征皇权，宽大的出檐让殿身更显庄严。",
+          tech: "屋顶既遮蔽雨雪、保护木构架，也通过出檐、屋脊和瓦色表达等级。重檐形成上下两层节奏，进一步抬升建筑威仪。",
+          color: "#d6a84f",
+          metrics: ["庑殿", "排水", "屋脊"]
+        },
+        {
+          id: "dougong",
+          name: "斗拱层",
+          category: "承托过渡",
+          short: "用密集的小体块模拟斗拱节奏，承接屋顶与柱网。",
+          tags: ["斗拱", "承托", "节奏"],
+          summary: "斗栱由斗、栱、昂、翘等构件层层叠出，位于柱头、额枋和屋檐之间，是力的传递结构，也是极具识别度的装饰构造。",
+          tech: "斗栱把屋檐荷载逐级传到柱网，并帮助屋檐向外伸展；密集排列在檐下形成阴影和节奏。",
+          color: "#bf6f38",
+          metrics: ["阵列", "分组", "替换"]
+        },
+        {
+          id: "columns",
+          name: "柱梁系统",
+          category: "主体支撑",
+          short: "朱红柱阵与横梁形成建筑主体的空间骨架。",
+          tags: ["柱网", "梁架", "空间"],
+          summary: "柱梁系统表现建筑主体支撑关系，朱红柱列与横向梁枋共同构成殿身骨架，决定开间、进深和内部秩序。",
+          tech: "木构架的重量主要由柱、梁、枋传递，墙体更多承担围护作用，这也是中国古代木构建筑的重要特点。",
+          color: "#a33024",
+          metrics: ["柱阵", "骨架", "可拆"]
+        },
+        {
+          id: "platform",
+          name: "台基系统",
+          category: "基座",
+          short: "石质台基抬升建筑，使主体从场地中显现出来。",
+          tags: ["台基", "阶梯", "基座"],
+          summary: "高大的汉白玉台基抬升殿身，台阶、栏板和望柱共同组织进入大殿的礼仪路径。",
+          tech: "台基承担防潮、排水、抬升和礼仪分隔的作用，登上台基的过程本身就是空间礼序的一部分。",
+          color: "#c8baa1",
+          metrics: ["3 层", "入口", "地基"]
+        },
+        {
+          id: "decor",
+          name: "脊兽装饰",
+          category: "装饰符号",
+          short: "屋脊上的金色小兽与鸱吻，是文化气息最强的可视化点。",
+          tags: ["脊兽", "鸱吻", "装饰"],
+          summary: "脊兽与鸱吻是屋脊端部的重要装饰，也体现宫殿建筑等级；它们收束屋顶线条，并具有压脊和遮护节点的作用。",
+          tech: "走兽沿屋角向上排列，形成从细部到整体的礼制秩序，也是观赏宫殿屋顶时最值得留意的细节之一。",
+          color: "#f2d89a",
+          metrics: ["局部", "AI 3D", "装饰"]
+        },
+        {
+          id: "painting",
+          name: "彩画纹样",
+          category: "表皮材质",
+          short: "彩画覆盖梁枋与檐下木构，兼具保护木材和礼制装饰功能。",
+          tags: ["彩画", "纹样", "贴图"],
+          summary: "彩画覆盖梁枋与檐下木构，常以青绿、朱红和金线组织纹样，既保护木材，也强化建筑等级。",
+          tech: "彩画远看形成统一色彩秩序，近看可见龙凤、云纹、几何边饰等细部，是古建筑表皮系统的重要部分。",
+          color: "#8fbec5",
+          metrics: ["贴图", "图解", "材质"]
+        }
+      ];
+
+      const byId = Object.fromEntries(fallbackComponents.map((item) => [item.id, item]));
+      const canvas = document.querySelector("#scene");
+      const ctx = canvas.getContext("2d");
+      const infoCanvas = document.querySelector("#infoCanvas");
+      const infoCtx = infoCanvas.getContext("2d");
+      const labelLayer = document.querySelector("#labelLayer");
+      const stageWrap = document.querySelector("#stageWrap");
+      const activeLayers = new Set(["roof", "dougong", "columns", "platform", "decor", "painting"]);
+      let selected = "whole";
+      let mode = "explore";
+      let explode = 0;
+      let targetExplode = 0;
+      let demoTimer = null;
+      let t = 0;
+
+      function resizeFallback() {
+        const rect = stageWrap.getBoundingClientRect();
+        canvas.width = Math.max(1, Math.floor(rect.width * window.devicePixelRatio));
+        canvas.height = Math.max(1, Math.floor(rect.height * window.devicePixelRatio));
+        canvas.style.width = rect.width + "px";
+        canvas.style.height = rect.height + "px";
+        ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+      }
+
+      function pathRoof(cx, cy, scale, yOffset) {
+        const w = 360 * scale;
+        const h = 76 * scale;
+        const d = 72 * scale;
+        const y = cy + yOffset;
+        return [
+          [cx - w / 2, y + h * 0.55],
+          [cx - w * 0.26, y - h * 0.35],
+          [cx + w * 0.26, y - h * 0.35],
+          [cx + w / 2, y + h * 0.55],
+          [cx + w * 0.34, y + h * 0.8],
+          [cx - w * 0.34, y + h * 0.8]
+        ];
+      }
+
+      function poly(points, fill, stroke) {
+        ctx.beginPath();
+        points.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
+        ctx.closePath();
+        ctx.fillStyle = fill;
+        ctx.fill();
+        ctx.strokeStyle = stroke || "rgba(242,216,154,.22)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      function rect(x, y, w, h, fill, id) {
+        ctx.fillStyle = fill;
+        ctx.fillRect(x, y, w, h);
+        ctx.strokeStyle = selected === id ? byId[id].color : "rgba(242,216,154,.2)";
+        ctx.lineWidth = selected === id ? 3 : 1;
+        ctx.strokeRect(x, y, w, h);
+      }
+
+      function layerOffset(id) {
+        if (mode !== "explode") return 0;
+        const offsets = { roof: -120, decor: -150, dougong: -48, columns: 12, painting: -18, platform: 54 };
+        return (offsets[id] || 0) * explode;
+      }
+
+      function drawScene() {
+        resizeFallback();
+        const rectBox = stageWrap.getBoundingClientRect();
+        const w = rectBox.width;
+        const h = rectBox.height;
+        const cx = w / 2;
+        const base = h * 0.68;
+        t += 0.015;
+        explode += (targetExplode - explode) * 0.08;
+
+        ctx.clearRect(0, 0, w, h);
+        const bg = ctx.createRadialGradient(cx, h * 0.35, 20, cx, h * 0.42, Math.max(w, h) * 0.58);
+        bg.addColorStop(0, mode === "night" ? "rgba(217,177,93,.14)" : "rgba(217,177,93,.18)");
+        bg.addColorStop(0.55, "rgba(25,50,55,.22)");
+        bg.addColorStop(1, "rgba(0,0,0,.12)");
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, w, h);
+
+        ctx.save();
+        ctx.translate(0, Math.sin(t) * 2);
+
+        if (activeLayers.has("platform")) {
+          const yo = layerOffset("platform");
+          rect(cx - 250, base + 58 + yo, 500, 30, selected === "platform" ? "rgba(200,186,161,.95)" : "rgba(180,166,138,.78)", "platform");
+          rect(cx - 215, base + 26 + yo, 430, 32, "rgba(206,192,166,.8)", "platform");
+          rect(cx - 175, base - 4 + yo, 350, 30, "rgba(196,181,152,.86)", "platform");
+          for (let i = 0; i < 5; i++) rect(cx - 50 + i * 18, base + 88 + i * 8 + yo, 110 - i * 12, 8, "rgba(235,225,202,.7)", "platform");
+        }
+
+        if (activeLayers.has("columns")) {
+          const yo = layerOffset("columns");
+          ctx.fillStyle = selected === "columns" ? "#c84738" : "#a33024";
+          [-150, -50, 50, 150].forEach((x) => {
+            ctx.beginPath();
+            ctx.roundRect(cx + x - 13, base - 170 + yo, 26, 166, 13);
+            ctx.fill();
+          });
+          rect(cx - 200, base - 186 + yo, 400, 18, "#6b1f18", "columns");
+          rect(cx - 190, base - 32 + yo, 380, 16, "#7e271f", "columns");
+        }
+
+        if (activeLayers.has("painting")) {
+          const yo = layerOffset("painting");
+          for (let i = -5; i <= 5; i++) {
+            rect(cx + i * 36 - 12, base - 205 + yo, 24, 10, selected === "painting" ? "#8fbec5" : "#466f66", "painting");
+          }
+        }
+
+        if (activeLayers.has("dougong")) {
+          const yo = layerOffset("dougong");
+          for (let row = 0; row < 3; row++) {
+            for (let i = -5; i <= 5; i++) {
+              rect(cx + i * 36 - 14 + (row % 2) * 12, base - 236 - row * 18 + yo, 28, 11, row % 2 ? "#bf6f38" : "#d9b15d", "dougong");
+            }
+          }
+        }
+
+        if (activeLayers.has("roof")) {
+          const yo = layerOffset("roof");
+          poly(pathRoof(cx, base - 284, 1, yo), selected === "roof" ? "#f0c567" : "#d1a245", "rgba(255,235,176,.55)");
+          rect(cx - 190, base - 242 + yo, 380, 32, "#b66b35", "roof");
+          poly(pathRoof(cx, base - 360, 0.72, yo), selected === "roof" ? "#f0c567" : "#d9b15d", "rgba(255,235,176,.55)");
+          rect(cx - 135, base - 326 + yo, 270, 26, "#b66b35", "roof");
+        }
+
+        if (activeLayers.has("decor")) {
+          const yo = layerOffset("decor");
+          ctx.fillStyle = selected === "decor" ? "#fff0b9" : "#f2d89a";
+          for (let i = -3; i <= 3; i++) {
+            ctx.beginPath();
+            ctx.moveTo(cx + i * 32, base - 411 + yo);
+            ctx.lineTo(cx + i * 32 - 9, base - 384 + yo);
+            ctx.lineTo(cx + i * 32 + 9, base - 384 + yo);
+            ctx.closePath();
+            ctx.fill();
+          }
+        }
+
+        ctx.restore();
+        drawLabels(cx, base);
+        requestAnimationFrame(drawScene);
+      }
+
+      function drawLabels(cx, base) {
+        const positions = {
+          roof: [cx + 185, base - 330 + layerOffset("roof")],
+          dougong: [cx + 205, base - 245 + layerOffset("dougong")],
+          columns: [cx - 210, base - 110 + layerOffset("columns")],
+          platform: [cx + 230, base + 42 + layerOffset("platform")],
+          decor: [cx + 92, base - 420 + layerOffset("decor")],
+          painting: [cx - 190, base - 204 + layerOffset("painting")]
+        };
+        labelLayer.innerHTML = "";
+        if (mode === "night") return;
+        Object.keys(positions).forEach((id) => {
+          if (!activeLayers.has(id)) return;
+          const el = document.createElement("div");
+          el.className = "scene-label show";
+          el.textContent = byId[id].name;
+          el.style.left = positions[id][0] + "px";
+          el.style.top = positions[id][1] + "px";
+          labelLayer.appendChild(el);
+        });
+      }
+
+      function renderList() {
+        const list = document.querySelector("#componentList");
+        const assetMap = {
+          whole: "assets/ai/illustration-overview.png",
+          roof: "assets/ai/illustration-roof.png",
+          dougong: "assets/ai/illustration-dougong.png",
+          columns: "assets/ai/illustration-columns.png",
+          platform: "assets/ai/illustration-platform.png",
+          decor: "assets/ai/illustration-decor.png",
+          painting: "assets/ai/illustration-painting.png"
+        };
+        list.innerHTML = "";
+        fallbackComponents.forEach((item, index) => {
+          const card = document.createElement("article");
+          card.className = "component-card";
+          card.dataset.id = item.id;
+          card.innerHTML = '<img class="component-thumb" src="' + (assetMap[item.id] || assetMap.whole) + '" alt="" /><div class="component-index">' + String(index + 1).padStart(2, "0") + '</div><h3>' + item.name + '</h3><p>' + item.short + '</p>';
+          card.addEventListener("click", () => select(item.id));
+          list.appendChild(card);
+        });
+      }
+
+      function renderToggles() {
+        const wrap = document.querySelector("#layerToggles");
+        wrap.innerHTML = "";
+        ["roof", "dougong", "columns", "platform", "decor", "painting"].forEach((id) => {
+          const row = document.createElement("label");
+          row.className = "toggle-row";
+          row.innerHTML = '<span>' + byId[id].name + '</span><input type="checkbox" checked data-layer="' + id + '" />';
+          row.querySelector("input").addEventListener("change", (event) => {
+            if (event.target.checked) activeLayers.add(id);
+            else activeLayers.delete(id);
+          });
+          wrap.appendChild(row);
+        });
+      }
+
+      function drawInfo(item) {
+        const assetMap = {
+          whole: "assets/ai/illustration-overview.png",
+          roof: "assets/ai/illustration-roof.png",
+          dougong: "assets/ai/illustration-dougong.png",
+          columns: "assets/ai/illustration-columns.png",
+          platform: "assets/ai/illustration-platform.png",
+          decor: "assets/ai/illustration-decor.png",
+          painting: "assets/ai/illustration-painting.png"
+        };
+        const w = infoCanvas.width;
+        const h = infoCanvas.height;
+        const img = new Image();
+        img.onload = function() {
+          const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+          const sw = w / scale;
+          const sh = h / scale;
+          const sx = (img.naturalWidth - sw) / 2;
+          const sy = (img.naturalHeight - sh) / 2;
+          infoCtx.clearRect(0, 0, w, h);
+          infoCtx.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
+        };
+        img.onerror = function() {
+          const g = infoCtx.createLinearGradient(0, 0, w, h);
+          g.addColorStop(0, "#f6efe1");
+          g.addColorStop(0.5, "#efe3cf");
+          g.addColorStop(1, "#e6dcc9");
+          infoCtx.fillStyle = g;
+          infoCtx.fillRect(0, 0, w, h);
+          infoCtx.fillStyle = item.color;
+          infoCtx.globalAlpha = 0.9;
+          infoCtx.fillRect(70, 210, 500, 30);
+          infoCtx.globalAlpha = 1;
+          infoCtx.fillStyle = "#463625";
+          infoCtx.font = "700 34px serif";
+          infoCtx.fillText(item.name, 28, 58);
+          infoCtx.fillStyle = "#bd8d36";
+          infoCtx.font = "500 16px sans-serif";
+          infoCtx.fillText(item.category, 30, 88);
+        };
+        img.src = assetMap[item.id] || assetMap.whole;
+      }
+
+      function select(id) {
+        selected = id;
+        const item = byId[id];
+        document.querySelectorAll(".component-card").forEach((card) => card.classList.toggle("active", card.dataset.id === id));
+        document.querySelector("#infoTitle").textContent = item.name;
+        document.querySelector("#infoSummary").textContent = item.summary;
+        document.querySelector("#infoTech").textContent = item.tech;
+        document.querySelector("#metricA").textContent = item.metrics[0];
+        document.querySelector("#metricB").textContent = item.metrics[1];
+        document.querySelector("#metricC").textContent = item.metrics[2];
+        const tags = document.querySelector("#infoTags");
+        tags.innerHTML = "";
+        item.tags.forEach((tag) => {
+          const el = document.createElement("span");
+          el.className = "tag";
+          el.textContent = tag;
+          tags.appendChild(el);
+        });
+        drawInfo(item);
+        const idx = Math.max(0, fallbackComponents.findIndex((entry) => entry.id === id));
+        document.querySelector("#progressBar").style.width = ((idx / (fallbackComponents.length - 1)) * 100) + "%";
+      }
+
+      function setMode(nextMode) {
+        mode = nextMode;
+        document.querySelectorAll(".mode").forEach((btn) => btn.classList.toggle("active", btn.dataset.mode === nextMode));
+        document.querySelector("#modeLabel").textContent = { explore: "探索模式", layers: "分层模式", explode: "爆炸模式", night: "夜游模式", demo: "演示模式" }[nextMode];
+        targetExplode = nextMode === "explode" ? 1 : 0;
+        if (demoTimer) clearInterval(demoTimer);
+        if (nextMode === "demo") {
+          let i = 0;
+          const seq = ["whole", "platform", "columns", "dougong", "roof", "decor", "painting"];
+          demoTimer = setInterval(() => {
+            i = (i + 1) % seq.length;
+            select(seq[i]);
+            targetExplode = i > 2 ? 1 : 0;
+          }, 1800);
+        }
+      }
+
+      function hitTest(event) {
+        const box = canvas.getBoundingClientRect();
+        const x = event.clientX - box.left;
+        const y = event.clientY - box.top;
+        const w = box.width;
+        const h = box.height;
+        const cx = w / 2;
+        const base = h * 0.68;
+        const zones = [
+          ["decor", cx - 130, base - 460, 260, 70],
+          ["roof", cx - 270, base - 395, 540, 190],
+          ["dougong", cx - 230, base - 275, 460, 80],
+          ["columns", cx - 240, base - 190, 480, 185],
+          ["platform", cx - 270, base - 10, 540, 140]
+        ];
+        for (const [id, zx, zy, zw, zh] of zones) {
+          if (activeLayers.has(id) && x >= zx && x <= zx + zw && y >= zy + layerOffset(id) && y <= zy + layerOffset(id) + zh) {
+            select(id);
+            return;
+          }
+        }
+      }
+
+      if (!CanvasRenderingContext2D.prototype.roundRect) {
+        CanvasRenderingContext2D.prototype.roundRect = function(x, y, width, height, radius) {
+          const r = Math.min(radius, width / 2, height / 2);
+          this.beginPath();
+          this.moveTo(x + r, y);
+          this.arcTo(x + width, y, x + width, y + height, r);
+          this.arcTo(x + width, y + height, x, y + height, r);
+          this.arcTo(x, y + height, x, y, r);
+          this.arcTo(x, y, x + width, y, r);
+          this.closePath();
+          return this;
+        };
+      }
+
+      renderList();
+      renderToggles();
+      document.querySelectorAll(".mode").forEach((btn) => btn.addEventListener("click", () => setMode(btn.dataset.mode)));
+      document.querySelector("#resetBtn").addEventListener("click", () => { setMode("explore"); select("whole"); });
+      document.querySelector("#prevBtn").addEventListener("click", () => {
+        const current = Math.max(0, fallbackComponents.findIndex((item) => item.id === selected));
+        select(fallbackComponents[(current - 1 + fallbackComponents.length) % fallbackComponents.length].id);
+      });
+      document.querySelector("#nextBtn").addEventListener("click", () => {
+        const current = Math.max(0, fallbackComponents.findIndex((item) => item.id === selected));
+        select(fallbackComponents[(current + 1) % fallbackComponents.length].id);
+      });
+      document.querySelector("#shotBtn").addEventListener("click", () => {
+        const link = document.createElement("a");
+        link.download = "taihe-hall-prototype-fallback.png";
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      });
+      canvas.addEventListener("click", hitTest);
+      window.addEventListener("resize", resizeFallback);
+      select("whole");
+      drawScene();
+      document.querySelector("#loading").classList.add("hide");
+      document.querySelector("#stageHint").textContent = "当前为离线兜底渲染：点击建筑区域或左侧目录查看说明";
+    }, 4000);
+  </script>
+</body>
+</html>
+
+

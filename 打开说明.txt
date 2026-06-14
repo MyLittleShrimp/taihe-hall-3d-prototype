@@ -1,0 +1,26 @@
+太和殿 3D 展示原型 - 本地打开说明
+
+推荐打开方式：
+1. 双击 start-taihe-hall.bat
+2. 等浏览器自动打开页面
+3. 浏览期间不要关闭启动出来的服务窗口
+
+不要直接双击 taihe-hall-3d-prototype.html：
+浏览器可能会因为本地文件安全限制，拦截 Three.js 模块或 GLB 模型。
+
+打包到其他电脑：
+请保持以下内容在同一个文件夹内：
+- taihe-hall-3d-prototype.html
+- assets 文件夹
+- vendor 文件夹
+- start-taihe-hall.bat
+- start-taihe-hall.ps1
+- 打开说明.txt
+
+其他电脑要求：
+- 推荐安装 Python 3
+- 如果没有 Python，启动器会尝试用 Windows PowerShell 的内置本地服务兜底
+
+隐私与接口：
+展示包不需要 Tripo3D API key。
+不要把 .env 文件一起打包或发送给别人。

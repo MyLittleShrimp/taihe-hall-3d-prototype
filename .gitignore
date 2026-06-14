@@ -1,0 +1,45 @@
+.env
+.env.*
+!.env.example
+__pycache__/
+*.pyc
+assets/models/tripo/tmp/
+
+# Local build / release artifacts
+release/
+*.zip
+tripo-ab-model-viewer.html
+assets/models/tripo/taihe-components-optimized/*-check.png
+assets/models/tripo/taihe-components-optimized/main-page-optimized-check.png
+
+# Node tooling used only for local optimization
+node_modules/
+package-lock.json
+
+# Tripo3D raw / experiment outputs. Keep only web-optimized models in Git.
+assets/models/tripo/ab-dougong/
+assets/models/tripo/taihe-components/
+
+# Keep only the minimal local Three.js runtime needed by the prototype.
+vendor/three/**
+!vendor/three/
+!vendor/three/LICENSE
+!vendor/three/package.json
+!vendor/three/build/
+!vendor/three/build/build/
+!vendor/three/build/build/three.module.js
+!vendor/three/examples/
+!vendor/three/examples/examples/
+!vendor/three/examples/examples/jsm/
+!vendor/three/examples/examples/jsm/controls/
+!vendor/three/examples/examples/jsm/controls/OrbitControls.js
+!vendor/three/examples/examples/jsm/loaders/
+!vendor/three/examples/examples/jsm/loaders/GLTFLoader.js
+!vendor/three/examples/examples/jsm/utils/
+!vendor/three/examples/examples/jsm/utils/BufferGeometryUtils.js
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

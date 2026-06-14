@@ -1,0 +1,15 @@
+{
+  "name": "taihe-hall-3d-prototype",
+  "version": "0.1.0",
+  "private": true,
+  "author": "虾老大",
+  "description": "太和殿 3D 构成分析交互原型",
+  "scripts": {
+    "serve": "python -m http.server 4173",
+    "start": "python -m http.server 4173"
+  },
+  "devDependencies": {
+    "@gltf-transform/cli": "4.2.1",
+    "meshoptimizer": "0.22.0"
+  }
+}

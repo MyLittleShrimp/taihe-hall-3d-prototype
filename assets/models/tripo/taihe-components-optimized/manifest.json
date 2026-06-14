@@ -1,0 +1,41 @@
+{
+  "quality": "web-optimized",
+  "source": "Tripo3D standard models optimized for browser display",
+  "results": [
+    {
+      "id": "overview",
+      "pbr_model": "assets/models/tripo/taihe-components-optimized/overview/overview_web.glb",
+      "file_size_mb": 6.35
+    },
+    {
+      "id": "roof",
+      "pbr_model": "assets/models/tripo/taihe-components-optimized/roof/roof_web.glb",
+      "file_size_mb": 6.46
+    },
+    {
+      "id": "dougong",
+      "pbr_model": "assets/models/tripo/taihe-components-optimized/dougong/dougong_web.glb",
+      "file_size_mb": 6.17
+    },
+    {
+      "id": "columns",
+      "pbr_model": "assets/models/tripo/taihe-components-optimized/columns/columns_web.glb",
+      "file_size_mb": 6.26
+    },
+    {
+      "id": "platform",
+      "pbr_model": "assets/models/tripo/taihe-components-optimized/platform/platform_web.glb",
+      "file_size_mb": 6.11
+    },
+    {
+      "id": "decor",
+      "pbr_model": "assets/models/tripo/taihe-components-optimized/decor/decor_web.glb",
+      "file_size_mb": 6.18
+    },
+    {
+      "id": "painting",
+      "pbr_model": "assets/models/tripo/taihe-components-optimized/painting/painting_web.glb",
+      "file_size_mb": 6.42
+    }
+  ]
+}
