@@ -53,37 +53,10 @@ http://127.0.0.1:4173/taihe-hall-3d-prototype.html
 ├── assets/
 │   ├── ai/                               # AI 图解与纹理资产
 │   └── models/tripo/
-│       └── taihe-components-optimized/   # GitHub 发布用轻量 GLB
+│       └── taihe-components-optimized/   # 网页展示用轻量 GLB
 └── vendor/
     └── three/                            # 本地 Three.js 运行依赖
 ```
-
-## GitHub 发布建议
-
-建议提交：
-
-- `taihe-hall-3d-prototype.html`
-- `assets/ai/`
-- `assets/models/tripo/taihe-components-optimized/`
-- `vendor/three/`
-- `start-taihe-hall.bat`
-- `start-taihe-hall.ps1`
-- `打开说明.txt`
-- `README.md`
-- `DEVELOPMENT.md`
-- `SECURITY.md`
-- `.gitignore`
-- `.gitattributes`
-- `LICENSE`
-
-不要提交：
-
-- `.env`
-- `release/`
-- `assets/models/tripo/ab-dougong/`
-- `assets/models/tripo/taihe-components/`
-- `node_modules/`
-- Tripo3D API key 或任何临时下载链接
 
 ## 资产说明
 
@@ -95,7 +68,7 @@ Tripo3D 原始标准模型较重，已优化为网页展示版本：
 assets/models/tripo/taihe-components-optimized/
 ```
 
-主页面默认引用优化后的 `*_web.glb`，原始标准模型仅用于本地备份与后续再优化，不建议提交到 GitHub。
+主页面默认引用优化后的 `*_web.glb`，原始标准模型仅用于本地备份与后续再优化。
 
 ## 许可
 
